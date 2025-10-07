@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MEERA: A Healthcare Platform Prototype</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            padding: 24px;
+            border-radius: 1rem;
+            width: 80%;
+            max-width: 500px;
+            text-align: center;
+            position: relative;
+        }
+    </style>
+</head>
+<body class="flex flex-col lg:flex-row min-h-screen">
+
+    <!-- Main Content Area -->
+    <main class="flex-grow p-4 md:p-8 bg-white shadow-xl rounded-2xl m-4 lg:m-8 overflow-y-auto">
+        <h1 class="text-3xl md:text-5xl font-extrabold text-center mb-2 text-indigo-700">Namaste!</h1>
+        <h2 class="text-xl md:text-2xl font-semibold text-center text-gray-600 mb-8">MEERA - Medical Education Empathy Relief Awareness</h2>
+        
+
+        <!-- Feature 1: Personal Health Scheduler -->
+        <section class="mb-10 p-6 bg-indigo-50 rounded-xl shadow-inner">
+            <h3 class="text-2xl font-bold text-indigo-800 mb-4">1. Personal Health Scheduler</h3>
+            <p class="text-gray-700 mb-4">Upload your prescription or vaccination card, and we will generate a personalized health calendar for you.</p>
+            <div class="flex flex-col sm:flex-row items-center gap-4">
+                <input type="file" id="prescriptionInput" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
+                <button onclick="simulateHealthScheduler()" class="w-full sm:w-auto px-6 py-2 bg-indigo-600 text-white font-semibold rounded-full shadow-lg hover:bg-indigo-700 transition duration-300">Generate Calendar</button>
+            </div>
+            <div id="schedulerOutput" class="mt-6 p-4 bg-white rounded-lg shadow-md hidden">
+                <h4 class="font-bold text-indigo-700">Calendar Generated!</h4>
+                <p class="text-sm mt-2">
+                    <span class="font-semibold">Prescription Analysis:</span>
+                    <br>Based on the uploaded document, our AI has identified the following details:
+                    <ul class="list-disc list-inside mt-2 text-sm">
+                        <li>**Medication:** Paracetamol 500mg, twice a day for 5 days.</li>
+                        <li>**Vaccine:** Polio Vaccine.</li>
+                        <li>**Check-up:** Routine health checkup in 3 months.</li>
+                    </ul>
+                    <br>
+                    <span class="font-semibold">Your Personalized Health Calendar:</span>
+                    <br>
+                    <ul class="list-disc list-inside mt-2 text-sm">
+                        <li>**Every day (5 days):** Take 1 tablet of Paracetamol in the morning and evening.</li>
+                        <li>**Next Month (Date TBD):** Polio Vaccine appointment. We will send you a reminder.</li>
+                        <li>**After 3 Months (Date TBD):** Schedule a general check-up. We will notify you to book an appointment.</li>
+                    </ul>
+                </p>
+            </div>
+        </section>
+
+        <!-- Feature 2: Disease Learning Hub -->
+        <section class="mb-10 p-6 bg-blue-50 rounded-xl shadow-inner">
+            <h3 class="text-2xl font-bold text-blue-800 mb-4">2. Disease Learning Hub</h3>
+            <p class="text-gray-700 mb-4">Type a disease name to get information, an animated video, and a chatbot summary.</p>
+            <div class="flex flex-col sm:flex-row items-center gap-4">
+                <input type="text" id="diseaseInput" placeholder="e.g., Acidity" class="w-full px-4 py-2 border rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <button onclick="simulateDiseaseHub()" class="w-full sm:w-auto px-6 py-2 bg-blue-600 text-white font-semibold rounded-full shadow-lg hover:bg-blue-700 transition duration-300">Search</button>
+            </div>
+            <div id="diseaseOutput" class="mt-6 p-4 bg-white rounded-lg shadow-md hidden">
+                <h4 class="font-bold text-blue-700" id="diseaseTitle"></h4>
+                <div class="aspect-video bg-gray-200 rounded-lg my-4 flex items-center justify-center">
+                    <!-- Vimeo video embed with autoplay for seamless playback -->
+                    <iframe id="videoPlayer" class="w-full h-full rounded-lg" src="https://player.vimeo.com/video/1117043988?autoplay=1&amp;loop=1&amp;autopause=0" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
+                </div>
+                <div id="diseaseInfo" class="text-sm mt-2"></div>
+            </div>
+        </section>
+
+        <!-- Feature 3: AI-Powered Image Diagnosis -->
+        <section class="p-6 bg-red-50 rounded-xl shadow-inner">
+            <h3 class="text-2xl font-bold text-red-800 mb-4">3. AI-Powered Image Diagnosis</h3>
+            <p class="text-gray-700 mb-4">Upload a photo of a skin rash or injury to get a possible diagnosis.</p>
+            <div class="flex flex-col sm:flex-row items-center gap-4">
+                <input type="file" id="imageInput" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 cursor-pointer">
+                <button onclick="simulateImageDiagnosis()" class="w-full sm:w-auto px-6 py-2 bg-red-600 text-white font-semibold rounded-full shadow-lg hover:bg-red-700 transition duration-300">Analyze Image</button>
+            </div>
+            <div id="imageOutput" class="mt-6 p-4 bg-white rounded-lg shadow-md hidden">
+                <h4 class="font-bold text-red-700">Diagnosis Result</h4>
+                <p class="text-sm mt-2">
+                    <span class="font-semibold">AI Diagnosis:</span>
+                    <br>
+                    Based on the uploaded image, the AI predicts a **Fungal Infection (Tinea)**.
+                    <br><br><b>Cure:</b>
+                    <ul class="list-disc list-inside mt-2 text-sm">
+                        <li>Keep the affected area clean and dry.</li>
+                        <li>Apply an over-the-counter anti-fungal cream as per instructions.</li>
+                        <li>Wear loose-fitting, breathable clothing.</li>
+                        <li>If the condition persists or worsens, consult a doctor immediately.</li>
+                    </ul>
+                </p>
+            </div>
+        </section>
+    </main>
+
+    <!-- Side Chatbot Panel -->
+    <aside class="w-full lg:w-96 flex-shrink-0 p-4 md:p-8 bg-gray-800 text-white shadow-xl rounded-2xl m-4 lg:m-8 flex flex-col">
+        <h3 class="text-2xl font-bold mb-4 text-center">Health Chatbot</h3>
+        <p class="text-sm text-gray-400 text-center mb-6">Ask your health-related questions here.</p>
+        <div class="flex items-center justify-center mb-4 gap-2">
+            <label for="languageSelect" class="text-sm text-gray-400">Select Language:</label>
+            <select id="languageSelect" class="p-2 rounded-lg bg-gray-900 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="hindi">हिन्दी (Hindi)</option>
+                <option value="english">English</option>
+                <option value="marathi">मराठी (Marathi)</option>
+                <option value="telugu">తెలుగు (Telugu)</option>
+                <option value="bengali">বাংলা (Bengali)</option>
+                <option value="gujarati">ગુજરાતી (Gujarati)</option>
+                <option value="punjabi">ਪੰਜਾਬੀ (Punjabi)</option>
+                <option value="tamil">தமிழ் (Tamil)</option>
+                <option value="kannada">ಕನ್ನಡ (Kannada)</option>
+                <option value="malayalam">മലയാളം (Malayalam)</option>
+            </select>
+        </div>
+        <div id="chatHistory" class="flex-grow overflow-y-auto p-4 mb-4 bg-gray-700 rounded-lg shadow-inner">
+            <!-- Chat messages will be added here -->
+            <div class="mb-2 text-left">
+                <p class="inline-block p-2 bg-indigo-500 rounded-lg shadow-md text-sm">Hello, I am the MEERA chatbot. How can I assist you?</p>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <input type="text" id="chatInput" placeholder="Type a message..." class="flex-grow p-3 rounded-full bg-gray-900 border border-gray-700 text-white focus:outline-none focus:border-indigo-500">
+            <button onclick="startVoiceInput()" class="px-4 py-3 bg-red-600 text-white font-bold rounded-full shadow-lg hover:bg-red-700 transition duration-300">🎤</button>
+            <button onclick="sendMessage()" class="px-6 py-3 bg-indigo-600 text-white font-bold rounded-full shadow-lg hover:bg-indigo-700 transition duration-300">Send</button>
+        </div>
+    </aside>
+
+    <!-- Voice Assistant Modal -->
+    <div id="voiceModal" class="modal">
+        <div class="modal-content text-gray-800">
+            <h4 class="font-bold text-lg mb-2">Voice Assistant Feature</h4>
+            <p>This feature is a prototype. It would require a backend service for speech-to-text and language processing to function correctly.</p>
+            <button onclick="closeModal()" class="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-full">Close</button>
+        </div>
+    </div>
+
+    <script>
+        // Helper functions for TTS
+        function base64ToArrayBuffer(base64) {
+            var binaryString = atob(base64);
+            var len = binaryString.length;
+            var bytes = new Uint8Array(len);
+            for (var i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        function writeString(view, offset, string) {
+            for (var i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+        function pcmToWav(pcm16Data, sampleRate) {
+            const buffer = new ArrayBuffer(44 + pcm16Data.byteLength);
+            const view = new DataView(buffer);
+            // Write WAV header
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + pcm16Data.byteLength, true);
+            writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, 1, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true);
+            view.setUint16(32, 2, true);
+            view.setUint16(34, 16, true);
+            writeString(view, 36, 'data');
+            view.setUint32(40, pcm16Data.byteLength, true);
+            // Write PCM data
+            let offset = 44;
+            for (let i = 0; i < pcm16Data.length; i++, offset += 2) {
+                view.setInt16(offset, pcm16Data[i], true);
+            }
+            return new Blob([buffer], { type: 'audio/wav' });
+        }
+
+        // Main TTS function
+        async function speakMessage(text, lang) {
+            const apiKey = ""; // Canvas will provide this in runtime
+            const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=" + apiKey;
+            
+            const payload = {
+                contents: [{
+                    parts: [{ text: text }]
+                }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: {
+                        voiceConfig: {
+                            prebuiltVoiceConfig: { voiceName: "Kore" }
+                        }
+                    }
+                },
+                model: "gemini-2.5-flash-preview-tts"
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                const part = result?.candidates?.[0]?.content?.parts?.[0];
+                const audioData = part?.inlineData?.data;
+                const mimeType = part?.inlineData?.mimeType;
+
+                if (audioData && mimeType && mimeType.startsWith("audio/")) {
+                    const sampleRate = parseInt(mimeType.match(/rate=(\d+)/)[1], 10);
+                    const pcmData = base64ToArrayBuffer(audioData);
+                    const pcm16 = new Int16Array(pcmData);
+                    const wavBlob = pcmToWav(pcm16, sampleRate);
+                    const audioUrl = URL.createObjectURL(wavBlob);
+                    const audio = new Audio(audioUrl);
+                    audio.play();
+                } else {
+                    console.error('Error: Audio data not found in response.');
+                }
+            } catch (error) {
+                console.error('Error calling TTS API:', error);
+            }
+        }
+
+        function showOutput(elementId) {
+            document.querySelectorAll('div[id$="Output"]').forEach(el => el.classList.add('hidden'));
+            document.getElementById(elementId).classList.remove('hidden');
+        }
+
+        function simulateHealthScheduler() {
+            showOutput('schedulerOutput');
+        }
+
+        function simulateDiseaseHub() {
+            const disease = document.getElementById('diseaseInput').value.trim().toLowerCase();
+            const diseaseOutput = document.getElementById('diseaseOutput');
+            const videoPlayer = document.getElementById('videoPlayer');
+            const diseaseTitle = document.getElementById('diseaseTitle');
+            const diseaseInfo = document.getElementById('diseaseInfo');
+
+            if (disease === "acidity") {
+                diseaseTitle.textContent = "About Acidity";
+                videoPlayer.src = "https://player.vimeo.com/video/1117043988?autoplay=1&amp;loop=1&amp;autopause=0";
+                videoPlayer.classList.remove('hidden');
+                diseaseInfo.innerHTML = `
+                    <p class="font-semibold">AI Chatbot Summary:</p>
+                    <p class="text-sm mt-2">
+                        Acidity, also known as acid reflux, is a common issue caused by excess acid production in the stomach.
+                        <br><br><b>Symptoms:</b>
+                        <ul class="list-disc list-inside mt-2 text-sm">
+                            <li>Burning sensation or stomach pain.</li>
+                            <li>Sour burps.</li>
+                            <li>Stomach gas and bloating.</li>
+                        </ul>
+                        <br><b>Prevention and Cure:</b>
+                        <ul class="list-disc list-inside mt-2 text-sm">
+                            <li>Eat meals on time and have small, frequent meals.</li>
+                            <li>Reduce spicy and oily foods.</li>
+                            <li>Avoid lying down immediately after eating.</li>
+                            <li>Drink lemon water or coconut water.</li>
+                        </ul>
+                    </p>
+                `;
+                showOutput('diseaseOutput');
+            } else {
+                diseaseTitle.textContent = "Information not available";
+                videoPlayer.classList.add('hidden');
+                diseaseInfo.innerHTML = `
+                    <p class="text-sm">Video and information about this disease are not available yet. Please search for another term or consult a specialist.</p>
+                `;
+                showOutput('diseaseOutput');
+            }
+        }
+
+        function simulateImageDiagnosis() {
+            showOutput('imageOutput');
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            if (message === "") return;
+
+            const chatHistory = document.getElementById('chatHistory');
+            const selectedLanguage = document.getElementById('languageSelect').value;
+            
+            // User message
+            const userMessageDiv = document.createElement('div');
+            userMessageDiv.className = 'mb-2 text-right';
+            userMessageDiv.innerHTML = `<p class="inline-block p-2 bg-gray-600 rounded-lg shadow-md text-sm">${message}</p>`;
+            chatHistory.appendChild(userMessageDiv);
+
+            let botResponseText = "";
+
+            if (selectedLanguage === "hindi" && message.toLowerCase().includes("rabies")) {
+                botResponseText = "Rabies ke shuruati lakshan mein tez bukhar, sir dard, aur ghabrahat shamil hai. Iska koi ilaaj nahi hai. Iski roktham ke liye, agar aapko kisi janwar ne kata hai, to turant doctor se sampark karein aur samay par vaccine lagwayein.";
+                await speakMessage(botResponseText, selectedLanguage);
+            } else {
+                const responses = {
+                    hindi: "Is vishay par vistarit jaankari ke liye, kripya upar diye gaye sections ka upyog karein.",
+                    english: "For detailed information on this topic, please use the sections provided above.",
+                    marathi: "या विषयावर तपशीलवार माहितीसाठी, कृपया वरील विभागांचा वापर करा.",
+                    telugu: "ఈ అంశంపై వివరమైన సమాచారం కోసం, దయచేసి పైన ఇచ్చిన విభాగాలను ఉపయోగించండి.",
+                    bengali: "এই বিষয়ে বিস্তারিত তথ্যের জন্য, অনুগ্রহ করে উপরের বিভাগগুলি ব্যবহার করুন।",
+                    gujarati: "આ વિષય પર વિગતવાર માહિતી માટે, કૃપા કરીને ઉપર આપેલ વિભાગોનો ઉપયોગ કરો.",
+                    punjabi: "ਇਸ ਵਿਸ਼ੇ 'ਤੇ ਵਿਸਤ੍ਰਿਤ ਜਾਣਕਾਰੀ ਲਈ, ਕਿਰਪਾ ਕਰਕੇ ਉੱਪਰ ਦਿੱਤੇ ਭਾਗਾਂ ਦੀ ਵਰਤੋਂ કરો।",
+                    tamil: "இந்த தலைப்பில் விரிவான தகவலுக்கு, மேலே வழங்கப்பட்ட பிரிவுகளைப் பயன்படுத்தவும்.",
+                    kannada: "ಈ ವಿಷಯದ ಬಗ್ಗೆ ವಿವರವಾದ ಮಾಹಿತಿಗಾಗಿ, ದయವಿಟ್ಟು ಮೇಲಿನ ವಿಭಾಗಗಳನ್ನು ಬಳಸಿ.",
+                    malayalam: "ഈ വിഷയത്തെക്കുറിച്ചുള്ള വിശദವಾದ വിവരങ്ങൾക്കായി, മുകളിലുള്ള വിഭാഗങ്ങൾ ഉപയോഗിക്കുക."
+                };
+                botResponseText = responses[selectedLanguage] || responses.english;
+            }
+
+            const botMessageDiv = document.createElement('div');
+            botMessageDiv.className = 'mb-2 text-left';
+            botMessageDiv.innerHTML = `<p class="inline-block p-2 bg-indigo-500 rounded-lg shadow-md text-sm">${botResponseText}</p>`;
+            
+            setTimeout(() => {
+                chatHistory.appendChild(botMessageDiv);
+                chatHistory.scrollTop = chatHistory.scrollHeight; // Scroll to bottom
+            }, 500);
+
+            input.value = '';
+        }
+        
+        function startVoiceInput() {
+            document.getElementById('voiceModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('voiceModal').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

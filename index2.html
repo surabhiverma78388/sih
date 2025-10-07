@@ -1,0 +1,2074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASHA Mobile EHR - Healthcare Companion</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            box-sizing: border-box;
+        }
+        
+        .fade-in {
+            opacity: 0;
+            transform: translateY(10px);
+            animation: fadeIn 0.3s ease forwards;
+        }
+        
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .pulse-dot {
+            animation: pulse 2s infinite;
+        }
+        
+        .slide-up {
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+        }
+        
+        .slide-up.active {
+            transform: translateY(0);
+        }
+        
+        .recording {
+            animation: recordingPulse 1s infinite alternate;
+        }
+        
+        @keyframes recordingPulse {
+            from { background-color: #ef4444; }
+            to { background-color: #dc2626; }
+        }
+        
+        .scanning {
+            animation: scanLine 2s infinite;
+        }
+        
+        @keyframes scanLine {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+        
+        .chart-bar {
+            transition: height 0.5s ease;
+        }
+        
+        .nav-item {
+            transition: all 0.2s ease;
+        }
+        
+        .nav-item.active {
+            background: linear-gradient(135deg, #0f766e, #065f46);
+            color: white;
+        }
+        
+        .priority-high { border-left: 4px solid #ef4444; }
+        .priority-medium { border-left: 4px solid #f59e0b; }
+        .priority-low { border-left: 4px solid #10b981; }
+        
+        .status-overdue { background: #fef2f2; color: #991b1b; }
+        .status-due { background: #fefbf2; color: #92400e; }
+        .status-completed { background: #f0fdf4; color: #166534; }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+        
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .voice-wave {
+            width: 4px;
+            height: 20px;
+            background: #ef4444;
+            margin: 0 2px;
+            animation: wave 1s infinite ease-in-out;
+        }
+        
+        .voice-wave:nth-child(2) { animation-delay: 0.1s; }
+        .voice-wave:nth-child(3) { animation-delay: 0.2s; }
+        .voice-wave:nth-child(4) { animation-delay: 0.3s; }
+        .voice-wave:nth-child(5) { animation-delay: 0.4s; }
+        
+        @keyframes wave {
+            0%, 40%, 100% { transform: scaleY(0.4); }
+            20% { transform: scaleY(1); }
+        }
+        
+        .hidden { display: none !important; }
+        .block { display: block !important; }
+    </style>
+</head>
+<body class="bg-gray-50 pb-20">
+    <header class="bg-gradient-to-r from-teal-600 to-teal-700 text-white p-4 sticky top-0 z-40">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center mr-3">
+                    <span class="text-xl font-bold">A</span>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold">ASHA Mobile EHR</h1>
+                    <p class="text-xs text-teal-100">Sunita Devi - ASHA Worker</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <select id="languageSelector" class="bg-white/20 text-white text-sm px-2 py-1 rounded border-none outline-none">
+                    <option value="en" class="text-gray-800">English</option>
+                    <option value="hi" class="text-gray-800">हिंदी</option>
+                    <option value="kn" class="text-gray-800">ಕನ್ನಡ</option>
+                    <option value="te" class="text-gray-800">తెలుగు</option>
+                </select>
+                <button id="connectivityToggle" class="flex items-center space-x-2 bg-white/20 px-3 py-1 rounded-full text-sm">
+                    <span id="connectivityDot" class="w-2 h-2 bg-green-400 rounded-full pulse-dot"></span>
+                    <span id="connectivityText">Online</span>
+                </button>
+                <button class="p-2 bg-white/20 rounded-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5v-5z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7H4l5-5v5z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="min-h-screen">
+        <div id="dashboard" class="page-content">
+            <div class="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6 m-4 rounded-xl">
+                <h2 class="text-xl font-bold mb-2" data-translate="goodMorning">Good Morning, Sunita!</h2>
+                <p class="text-blue-100" data-translate="greatDay">Today is a great day to serve your community</p>
+                <div class="mt-4 flex items-center space-x-4 text-sm">
+                    <div class="flex items-center">
+                        <span class="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
+                        <span data-translate="village">Village: Rampur</span>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="w-2 h-2 bg-yellow-400 rounded-full mr-2"></span>
+                        <span data-translate="weather">Weather: 28°C</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 p-4">
+                <div onclick="showTodaysVisits()" class="bg-white rounded-xl p-4 shadow-sm cursor-pointer hover:shadow-lg transition-shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-2xl font-bold text-teal-600">12</p>
+                            <p class="text-sm text-gray-600" data-translate="todaysVisits">Today's Visits</p>
+                        </div>
+                        <div class="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
+                            <span class="text-teal-600">👥</span>
+                        </div>
+                    </div>
+                </div>
+                <div onclick="showPendingTasks()" class="bg-white rounded-xl p-4 shadow-sm cursor-pointer hover:shadow-lg transition-shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-2xl font-bold text-orange-600">8</p>
+                            <p class="text-sm text-gray-600" data-translate="pendingTasks">Pending Tasks</p>
+                        </div>
+                        <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                            <span class="text-orange-600">📋</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4">
+                <h3 class="text-lg font-semibold mb-3" data-translate="quickActions">Quick Actions</h3>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="showPage('patient-registration')" class="bg-white rounded-xl p-4 shadow-sm text-left hover:shadow-md transition-shadow">
+                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-3">
+                            <span class="text-blue-600 text-xl">👤</span>
+                        </div>
+                        <p class="font-semibold text-gray-900" data-translate="registerPatient">Register Patient</p>
+                        <p class="text-xs text-gray-600" data-translate="addNewPatient">Add new patient</p>
+                    </button>
+                    <button onclick="showOCRScanner()" class="bg-white rounded-xl p-4 shadow-sm text-left hover:shadow-md transition-shadow">
+                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-3">
+                            <span class="text-green-600 text-xl">📄</span>
+                        </div>
+                        <p class="font-semibold text-gray-900" data-translate="scanForm">Scan Form</p>
+                        <p class="text-xs text-gray-600" data-translate="ocrCapture">OCR capture</p>
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-4">
+                <h3 class="text-lg font-semibold mb-3" data-translate="priorityTasks">Priority Tasks</h3>
+                <div class="space-y-3">
+                    <div onclick="showTaskDetails('immunization-overdue')" class="bg-white rounded-xl p-4 shadow-sm priority-high cursor-pointer hover:shadow-md transition-shadow">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1">
+                                <p class="font-semibold text-gray-900">Immunization Overdue</p>
+                                <p class="text-sm text-gray-600">Baby Raj - DPT-3 (5 days overdue)</p>
+                                <p class="text-xs text-red-600 mt-1">High Priority</p>
+                            </div>
+                            <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                                <span class="text-red-600 text-sm">💉</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div onclick="showTaskDetails('anc-visit-due')" class="bg-white rounded-xl p-4 shadow-sm priority-medium cursor-pointer hover:shadow-md transition-shadow">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1">
+                                <p class="font-semibold text-gray-900">ANC Visit Due</p>
+                                <p class="text-sm text-gray-600">Priya Sharma - 2nd Trimester</p>
+                                <p class="text-xs text-yellow-600 mt-1">Due Today</p>
+                            </div>
+                            <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                                <span class="text-yellow-600 text-sm">👶</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div onclick="showTaskDetails('follow-up-visit')" class="bg-white rounded-xl p-4 shadow-sm priority-low cursor-pointer hover:shadow-md transition-shadow">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1">
+                                <p class="font-semibold text-gray-900">Follow-up Visit</p>
+                                <p class="text-sm text-gray-600">Meera Devi - Post-delivery check</p>
+                                <p class="text-xs text-green-600 mt-1">This Week</p>
+                            </div>
+                            <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                                <span class="text-green-600 text-sm">✓</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="patient-registration" class="page-content hidden">
+            <div class="p-4">
+                <div class="flex items-center mb-6">
+                    <button onclick="showPage('dashboard')" class="mr-3 p-2 hover:bg-gray-100 rounded-lg">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                    </button>
+                    <h2 class="text-xl font-bold">Patient Registration</h2>
+                </div>
+
+                <div class="mb-6">
+                    <p class="text-sm font-medium text-gray-700 mb-3">Patient Type</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button id="childBtn" onclick="selectPatientType('child')" class="p-4 border-2 border-blue-200 rounded-xl text-center bg-blue-50">
+                            <div class="text-2xl mb-2">👶</div>
+                            <p class="font-semibold text-blue-700">Child</p>
+                        </button>
+                        <button id="motherBtn" onclick="selectPatientType('mother')" class="p-4 border-2 border-gray-200 rounded-xl text-center">
+                            <div class="text-2xl mb-2">🤱</div>
+                            <p class="font-semibold text-gray-700">Pregnant Mother</p>
+                        </button>
+                    </div>
+                </div>
+
+                <form id="registrationForm" class="space-y-4">
+                    <div class="bg-white rounded-xl p-4 shadow-sm">
+                        <h3 class="font-semibold mb-4 flex items-center">
+                            <span class="w-6 h-6 bg-teal-100 rounded-full flex items-center justify-center mr-2 text-sm">1</span>
+                            Basic Information
+                        </h3>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                                <div class="relative">
+                                    <input type="text" id="patientName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent" placeholder="Enter patient name">
+                                    <button type="button" onclick="startVoiceInput('patientName')" class="absolute right-2 top-2 p-1 text-gray-400 hover:text-teal-600">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Age</label>
+                                    <input type="number" id="patientAge" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent" placeholder="Age">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+                                    <select id="patientGender" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent">
+                                        <option value="">Select</option>
+                                        <option value="male">Male</option>
+                                        <option value="female">Female</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Village</label>
+                                <select id="patientVillage" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent">
+                                    <option value="">Select Village</option>
+                                    <option value="rampur">Rampur</option>
+                                    <option value="krishnapur">Krishnapur</option>
+                                    <option value="govindpur">Govindpur</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl p-4 shadow-sm">
+                        <h3 class="font-semibold mb-4 flex items-center">
+                            <span class="w-6 h-6 bg-teal-100 rounded-full flex items-center justify-center mr-2 text-sm">2</span>
+                            ABHA ID
+                        </h3>
+                        
+                        <div class="space-y-3">
+                            <button type="button" onclick="simulateQRScan()" class="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg text-center hover:border-teal-500 hover:bg-teal-50">
+                                <div class="text-2xl mb-2">📱</div>
+                                <p class="text-sm font-medium text-gray-700">Scan ABHA QR Code</p>
+                                <p class="text-xs text-gray-500">Tap to simulate QR scan</p>
+                            </button>
+                            
+                            <div class="text-center text-sm text-gray-500">OR</div>
+                            
+                            <input type="text" id="abhaId" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent" placeholder="Enter ABHA ID manually">
+                        </div>
+                    </div>
+
+                    <div id="childFields" class="bg-white rounded-xl p-4 shadow-sm">
+                        <h3 class="font-semibold mb-4 flex items-center">
+                            <span class="w-6 h-6 bg-teal-100 rounded-full flex items-center justify-center mr-2 text-sm">3</span>
+                            Child Information
+                        </h3>
+                        
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Birth Weight (kg)</label>
+                                    <input type="number" step="0.1" id="birthWeight" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent" placeholder="2.5">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
+                                    <input type="date" id="dateOfBirth" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent">
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Mother's Name</label>
+                                <input type="text" id="motherName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent" placeholder="Enter mother's name">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="motherFields" class="bg-white rounded-xl p-4 shadow-sm hidden">
+                        <h3 class="font-semibold mb-4 flex items-center">
+                            <span class="w-6 h-6 bg-teal-100 rounded-full flex items-center justify-center mr-2 text-sm">3</span>
+                            Pregnancy Information
+                        </h3>
+                        
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">LMP Date</label>
+                                    <input type="date" id="lmpDate" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Gravida</label>
+                                    <input type="number" id="gravida" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent" placeholder="1">
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Risk Factors</label>
+                                <div class="space-y-2">
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="anemia" class="rounded border-gray-300 text-teal-600 focus:ring-teal-500">
+                                        <span class="ml-2 text-sm">Anemia</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="hypertension" class="rounded border-gray-300 text-teal-600 focus:ring-teal-500">
+                                        <span class="ml-2 text-sm">Hypertension</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="diabetes" class="rounded border-gray-300 text-teal-600 focus:ring-teal-500">
+                                        <span class="ml-2 text-sm">Diabetes</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full bg-teal-600 text-white py-3 rounded-lg font-semibold hover:bg-teal-700 transition-colors">
+                        Register Patient
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div id="health-records" class="page-content hidden">
+            <div class="p-4">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-xl font-bold" data-translate="healthRecords">Health Records</h2>
+                    <button class="p-2 bg-teal-100 text-teal-600 rounded-lg">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="mb-4">
+                    <input type="text" id="searchRecords" data-translate="searchPatients" placeholder="Search patients..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent mb-3">
+                    
+                    <div class="flex space-x-2 overflow-x-auto pb-2">
+                        <button onclick="filterRecords('all')" class="filter-btn active px-4 py-2 bg-teal-600 text-white rounded-full text-sm whitespace-nowrap" data-translate="all">All</button>
+                        <button onclick="filterRecords('children')" class="filter-btn px-4 py-2 bg-gray-200 text-gray-700 rounded-full text-sm whitespace-nowrap" data-translate="children">Children</button>
+                        <button onclick="filterRecords('mothers')" class="filter-btn px-4 py-2 bg-gray-200 text-gray-700 rounded-full text-sm whitespace-nowrap" data-translate="mothers">Mothers</button>
+                        <button onclick="filterRecords('high-risk')" class="filter-btn px-4 py-2 bg-gray-200 text-gray-700 rounded-full text-sm whitespace-nowrap" data-translate="highRisk">High Risk</button>
+                        <button onclick="filterRecords('overdue')" class="filter-btn px-4 py-2 bg-gray-200 text-gray-700 rounded-full text-sm whitespace-nowrap" data-translate="overdue">Overdue</button>
+                    </div>
+                </div>
+
+                <div id="recordsList" class="space-y-3">
+                    </div>
+            </div>
+        </div>
+
+        <div id="immunization" class="page-content hidden">
+            <div class="p-4">
+                <h2 class="text-xl font-bold mb-6" data-translate="immunizationManagement">Immunization Management</h2>
+
+                <div class="grid grid-cols-3 gap-3 mb-6">
+                    <div class="bg-red-50 border border-red-200 rounded-xl p-3 text-center">
+                        <p class="text-2xl font-bold text-red-600">5</p>
+                        <p class="text-xs text-red-600">Overdue</p>
+                    </div>
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-center">
+                        <p class="text-2xl font-bold text-yellow-600">8</p>
+                        <p class="text-xs text-yellow-600">Due This Week</p>
+                    </div>
+                    <div class="bg-green-50 border border-green-200 rounded-xl p-3 text-center">
+                        <p class="text-2xl font-bold text-green-600">12</p>
+                        <p class="text-xs text-green-600">Up to Date</p>
+                    </div>
+                </div>
+
+                <div class="flex space-x-1 mb-4 bg-gray-100 rounded-lg p-1">
+                    <button onclick="showImmunizationTab('due-list')" class="immunization-tab active flex-1 py-2 px-3 rounded-md text-sm font-medium" data-translate="dueList">Due List</button>
+                    <button onclick="showImmunizationTab('vaccine-cards')" class="immunization-tab flex-1 py-2 px-3 rounded-md text-sm font-medium" data-translate="vaccineCards">Vaccine Cards</button>
+                    <button onclick="showImmunizationTab('dropouts')" class="immunization-tab flex-1 py-2 px-3 rounded-md text-sm font-medium" data-translate="dropouts">Dropouts</button>
+                </div>
+
+                <div id="due-list-tab" class="immunization-content">
+                    <div class="space-y-3">
+                        <div class="bg-white rounded-xl p-4 shadow-sm border-l-4 border-red-500">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <p class="font-semibold text-gray-900">Baby Raj Kumar</p>
+                                    <p class="text-sm text-gray-600">DPT-3, OPV-3 • 14 weeks</p>
+                                    <p class="text-xs text-red-600 mt-1">5 days overdue</p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="status-overdue px-2 py-1 rounded-full text-xs font-medium">Overdue</span>
+                                    <button onclick="recordVaccination('raj-kumar')" class="block mt-2 px-3 py-1 bg-teal-600 text-white rounded text-xs">Record</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl p-4 shadow-sm border-l-4 border-red-500">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <p class="font-semibold text-gray-900">Baby Kavita Singh</p>
+                                    <p class="text-sm text-gray-600">BCG, OPV-0 • Birth</p>
+                                    <p class="text-xs text-red-600 mt-1">12 days overdue</p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="status-overdue px-2 py-1 rounded-full text-xs font-medium">Overdue</span>
+                                    <button onclick="recordVaccination('kavita-singh')" class="block mt-2 px-3 py-1 bg-teal-600 text-white rounded text-xs">Record</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl p-4 shadow-sm border-l-4 border-yellow-500">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <p class="font-semibold text-gray-900">Baby Anita Sharma</p>
+                                    <p class="text-sm text-gray-600">Measles • 9 months</p>
+                                    <p class="text-xs text-yellow-600 mt-1">Due in 2 days</p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="status-due px-2 py-1 rounded-full text-xs font-medium">Due Soon</span>
+                                    <button onclick="recordVaccination('anita-sharma')" class="block mt-2 px-3 py-1 bg-teal-600 text-white rounded text-xs">Record</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl p-4 shadow-sm border-l-4 border-yellow-500">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <p class="font-semibold text-gray-900">Baby Rohit Kumar</p>
+                                    <p class="text-sm text-gray-600">DPT-1, OPV-1 • 6 weeks</p>
+                                    <p class="text-xs text-yellow-600 mt-1">Due tomorrow</p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="status-due px-2 py-1 rounded-full text-xs font-medium">Due Soon</span>
+                                    <button onclick="recordVaccination('rohit-kumar')" class="block mt-2 px-3 py-1 bg-teal-600 text-white rounded text-xs">Record</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl p-4 shadow-sm border-l-4 border-green-500">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <p class="font-semibold text-gray-900">Baby Priya Patel</p>
+                                    <p class="text-sm text-gray-600">DPT-2, OPV-2 • 10 weeks</p>
+                                    <p class="text-xs text-green-600 mt-1">Completed today</p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="status-completed px-2 py-1 rounded-full text-xs font-medium">Completed</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="vaccine-cards-tab" class="immunization-content hidden">
+                    <div class="space-y-4">
+                        <div class="bg-white rounded-xl p-4 shadow-sm">
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <p class="font-semibold text-gray-900">Baby Raj Kumar</p>
+                                    <p class="text-sm text-gray-600">DOB: 15/08/2024 • Mother: Sunita Devi</p>
+                                </div>
+                                <button onclick="viewFullVaccineCard('raj-kumar')" class="text-teal-600 text-sm hover:underline">View Full Card</button>
+                            </div>
+                            
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between py-2 border-b border-gray-100">
+                                    <span class="text-sm">BCG (Birth)</span>
+                                    <span class="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white text-xs">✓</span>
+                                </div>
+                                <div class="flex items-center justify-between py-2 border-b border-gray-100">
+                                    <span class="text-sm">OPV-1, DPT-1 (6 weeks)</span>
+                                    <span class="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white text-xs">✓</span>
+                                </div>
+                                <div class="flex items-center justify-between py-2 border-b border-gray-100">
+                                    <span class="text-sm">OPV-2, DPT-2 (10 weeks)</span>
+                                    <span class="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white text-xs">✓</span>
+                                </div>
+                                <div class="flex items-center justify-between py-2">
+                                    <span class="text-sm">OPV-3, DPT-3 (14 weeks)</span>
+                                    <span class="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs">!</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl p-4 shadow-sm">
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <p class="font-semibold text-gray-900">Baby Anita Sharma</p>
+                                    <p class="text-sm text-gray-600">DOB: 12/03/2024 • Mother: Priya Sharma</p>
+                                </div>
+                                <button onclick="viewFullVaccineCard('anita-sharma')" class="text-teal-600 text-sm hover:underline">View Full Card</button>
+                            </div>
+                            
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between py-2 border-b border-gray-100">
+                                    <span class="text-sm">BCG (Birth)</span>
+                                    <span class="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white text-xs">✓</span>
+                                </div>
+                                <div class="flex items-center justify-between py-2 border-b border-gray-100">
+                                    <span class="text-sm">DPT-1,2,3 & OPV-1,2,3</span>
+                                    <span class="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white text-xs">✓</span>
+                                </div>
+                                <div class="flex items-center justify-between py-2">
+                                    <span class="text-sm">Measles (9 months)</span>
+                                    <span class="w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center text-white text-xs">⏳</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl p-4 shadow-sm">
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <p class="font-semibold text-gray-900">Baby Priya Patel</p>
+                                    <p class="text-sm text-gray-600">DOB: 28/09/2024 • Mother: Meera Patel</p>
+                                </div>
+                                <button onclick="viewFullVaccineCard('priya-patel')" class="text-teal-600 text-sm hover:underline">View Full Card</button>
+                            </div>
+                            
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between py-2 border-b border-gray-100">
+                                    <span class="text-sm">BCG (Birth)</span>
+                                    <span class="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white text-xs">✓</span>
+                                </div>
+                                <div class="flex items-center justify-between py-2 border-b border-gray-100">
+                                    <span class="text-sm">OPV-1, DPT-1 (6 weeks)</span>
+                                    <span class="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white text-xs">✓</span>
+                                </div>
+                                <div class="flex items-center justify-between py-2">
+                                    <span class="text-sm">OPV-2, DPT-2 (10 weeks)</span>
+                                    <span class="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white text-xs">✓</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="dropouts-tab" class="immunization-content hidden">
+                    <div class="space-y-3">
+                        <div class="bg-white rounded-xl p-4 shadow-sm border-l-4 border-orange-500">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <p class="font-semibold text-gray-900">Baby Suresh Kumar</p>
+                                    <p class="text-sm text-gray-600">Missed DPT-2 • 12 weeks old</p>
+                                    <p class="text-xs text-orange-600 mt-1">Dropout - Follow up needed</p>
+                                </div>
+                                <button onclick="followUpDropout('suresh-kumar')" class="px-3 py-1 bg-orange-600 text-white rounded text-xs hover:bg-orange-700">Follow Up</button>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl p-4 shadow-sm border-l-4 border-red-500">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <p class="font-semibold text-gray-900">Baby Kavita Devi</p>
+                                    <p class="text-sm text-gray-600">No vaccines since birth • 8 weeks old</p>
+                                    <p class="text-xs text-red-600 mt-1">Left-out - Urgent action needed</p>
+                                </div>
+                                <button onclick="urgentFollowUp('kavita-devi')" class="px-3 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700">Urgent</button>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl p-4 shadow-sm border-l-4 border-orange-500">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <p class="font-semibold text-gray-900">Baby Amit Singh</p>
+                                    <p class="text-sm text-gray-600">Missed Measles vaccine • 11 months old</p>
+                                    <p class="text-xs text-orange-600 mt-1">Dropout - 2 months overdue</p>
+                                </div>
+                                <button onclick="followUpDropout('amit-singh')" class="px-3 py-1 bg-orange-600 text-white rounded text-xs hover:bg-orange-700">Follow Up</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="maternal-health" class="page-content hidden">
+            <div class="p-4">
+                <h2 class="text-xl font-bold mb-6" data-translate="maternalHealth">Maternal Health</h2>
+
+                <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+                    <h3 class="font-semibold text-red-800 mb-3 flex items-center">
+                        <span class="w-6 h-6 bg-red-200 rounded-full flex items-center justify-center mr-2 text-sm">⚠️</span>
+                        <span data-translate="highRiskCases">High-Risk Cases</span> (3)
+                    </h3>
+                    <div class="space-y-2">
+                        <div class="bg-white rounded-lg p-3 flex items-center justify-between">
+                            <div>
+                                <p class="font-medium text-gray-900">Sunita Devi</p>
+                                <p class="text-sm text-gray-600">Anemia + Hypertension • 28 weeks</p>
+                            </div>
+                            <button onclick="viewHighRiskCase('sunita-devi')" class="px-3 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700">Priority</button>
+                        </div>
+                        <div class="bg-white rounded-lg p-3 flex items-center justify-between">
+                            <div>
+                                <p class="font-medium text-gray-900">Kamala Sharma</p>
+                                <p class="text-sm text-gray-600">Previous C-section • 32 weeks</p>
+                            </div>
+                            <button onclick="viewHighRiskCase('kamala-sharma')" class="px-3 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700">Monitor</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <h3 class="font-semibold mb-3" data-translate="ancPncSchedule">ANC/PNC Schedule</h3>
+                    <div class="space-y-3">
+                        <div class="bg-white rounded-xl p-4 shadow-sm">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <p class="font-semibold text-gray-900">Priya Sharma</p>
+                                    <p class="text-sm text-gray-600">ANC-2 Visit • 20 weeks pregnant</p>
+                                    <p class="text-xs text-yellow-600 mt-1">Due today</p>
+                                </div>
+                                <button onclick="recordANCVisit('priya-sharma')" class="px-3 py-1 bg-teal-600 text-white rounded text-xs">Record Visit</button>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl p-4 shadow-sm">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <p class="font-semibold text-gray-900">Meera Patel</p>
+                                    <p class="text-sm text-gray-600">PNC-1 Visit • Delivered 3 days ago</p>
+                                    <p class="text-xs text-green-600 mt-1">Scheduled for tomorrow</p>
+                                </div>
+                                <button class="px-3 py-1 bg-gray-400 text-white rounded text-xs">Scheduled</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-white rounded-xl p-4 shadow-sm text-center">
+                        <p class="text-2xl font-bold text-blue-600">15</p>
+                        <p class="text-sm text-gray-600">Active Pregnancies</p>
+                    </div>
+                    <div class="bg-white rounded-xl p-4 shadow-sm text-center">
+                        <p class="text-2xl font-bold text-green-600">8</p>
+                        <p class="text-sm text-gray-600">Deliveries This Month</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="work-planning" class="page-content hidden">
+            <div class="p-4">
+                <h2 class="text-xl font-bold mb-6" data-translate="workPlanningReports">Work Planning & Reports</h2>
+
+                <div class="mb-6">
+                    <h3 class="font-semibold mb-3" data-translate="todaysWorkPlan">Today's Work Plan</h3>
+                    <div class="space-y-3">
+                        <div class="bg-white rounded-xl p-4 shadow-sm">
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 class="font-semibold text-gray-900">Village: Rampur</h4>
+                                <span class="text-xs text-gray-500">8:00 AM - 12:00 PM</span>
+                            </div>
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between py-1">
+                                    <span class="text-sm">Immunizations</span>
+                                    <button onclick="viewVillageDetails('rampur', 'immunizations')" class="px-2 py-1 bg-red-100 text-red-800 rounded text-xs hover:bg-red-200">3 overdue</button>
+                                </div>
+                                <div class="flex items-center justify-between py-1">
+                                    <span class="text-sm">ANC Visits</span>
+                                    <button onclick="viewVillageDetails('rampur', 'anc')" class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs hover:bg-yellow-200">2 due</button>
+                                </div>
+                            </div>
+                            <button onclick="startVillageVisit('rampur')" class="w-full mt-3 px-3 py-2 bg-teal-600 text-white rounded text-sm hover:bg-teal-700">Start Village Visit</button>
+                        </div>
+
+                        <div class="bg-white rounded-xl p-4 shadow-sm">
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 class="font-semibold text-gray-900">Village: Krishnapur</h4>
+                                <span class="text-xs text-gray-500">2:00 PM - 5:00 PM</span>
+                            </div>
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between py-1">
+                                    <span class="text-sm">Follow-ups</span>
+                                    <button onclick="viewVillageDetails('krishnapur', 'followups')" class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs hover:bg-blue-200">4 visits</button>
+                                </div>
+                                <div class="flex items-center justify-between py-1">
+                                    <span class="text-sm">New Registrations</span>
+                                    <button onclick="viewVillageDetails('krishnapur', 'registrations')" class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs hover:bg-green-200">1 pending</button>
+                                </div>
+                            </div>
+                            <button onclick="startVillageVisit('krishnapur')" class="w-full mt-3 px-3 py-2 bg-teal-600 text-white rounded text-sm hover:bg-teal-700">Start Village Visit</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <h3 class="font-semibold mb-3">Reports Dashboard</h3>
+                    
+                    <div class="bg-white rounded-xl p-4 shadow-sm mb-4">
+                        <h4 class="font-medium mb-3">Immunization Coverage - This Month</h4>
+                        <div class="flex items-end space-x-2 h-32">
+                            <div class="flex flex-col items-center">
+                                <div class="chart-bar bg-green-500 w-8 mb-2" style="height: 80%"></div>
+                                <span class="text-xs text-gray-600">Week 1</span>
+                            </div>
+                            <div class="flex flex-col items-center">
+                                <div class="chart-bar bg-green-500 w-8 mb-2" style="height: 65%"></div>
+                                <span class="text-xs text-gray-600">Week 2</span>
+                            </div>
+                            <div class="flex flex-col items-center">
+                                <div class="chart-bar bg-yellow-500 w-8 mb-2" style="height: 45%"></div>
+                                <span class="text-xs text-gray-600">Week 3</span>
+                            </div>
+                            <div class="flex flex-col items-center">
+                                <div class="chart-bar bg-red-500 w-8 mb-2" style="height: 30%"></div>
+                                <span class="text-xs text-gray-600">Week 4</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-white rounded-xl p-4 shadow-sm text-center">
+                            <p class="text-2xl font-bold text-teal-600">85%</p>
+                            <p class="text-sm text-gray-600">Immunization Coverage</p>
+                        </div>
+                        <div class="bg-white rounded-xl p-4 shadow-sm text-center">
+                            <p class="text-2xl font-bold text-blue-600">92%</p>
+                            <p class="text-sm text-gray-600">ANC Coverage</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2">
+        <div class="flex justify-around">
+            <button onclick="showPage('dashboard')" class="nav-item flex flex-col items-center py-2 px-3 rounded-lg">
+                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"/>
+                </svg>
+                <span class="text-xs" data-translate="dashboard">Dashboard</span>
+            </button>
+            <button onclick="showPage('health-records')" class="nav-item flex flex-col items-center py-2 px-3 rounded-lg">
+                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <span class="text-xs" data-translate="records">Records</span>
+            </button>
+            <button onclick="showPage('immunization')" class="nav-item flex flex-col items-center py-2 px-3 rounded-lg">
+                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+                </svg>
+                <span class="text-xs" data-translate="vaccines">Vaccines</span>
+            </button>
+            <button onclick="showPage('maternal-health')" class="nav-item flex flex-col items-center py-2 px-3 rounded-lg">
+                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                </svg>
+                <span class="text-xs" data-translate="maternal">Maternal</span>
+            </button>
+            <button onclick="showPage('work-planning')" class="nav-item flex flex-col items-center py-2 px-3 rounded-lg">
+                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                </svg>
+                <span class="text-xs" data-translate="reports">Reports</span>
+            </button>
+        </div>
+    </nav>
+
+    <div id="syncBar" class="fixed bottom-16 left-0 right-0 bg-green-600 text-white px-4 py-2 text-sm flex items-center justify-between">
+        <div class="flex items-center">
+            <span id="syncIcon" class="w-4 h-4 mr-2">✓</span>
+            <span id="syncText" data-translate="allDataSynced">All data synced</span>
+        </div>
+        <button id="syncButton" onclick="manualSync()" class="text-xs bg-white/20 px-2 py-1 rounded" data-translate="syncNow">Sync Now</button>
+    </div>
+
+    <div id="voiceModal" class="modal">
+        <div class="bg-white rounded-xl p-6 m-4 max-w-sm w-full">
+            <div class="text-center">
+                <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 recording">
+                    <svg class="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-semibold mb-2">Voice Input</h3>
+                <p class="text-gray-600 mb-4">Speak clearly in Hindi, Kannada, or Telugu</p>
+                
+                <div class="flex justify-center items-center mb-4">
+                    <div class="voice-wave"></div>
+                    <div class="voice-wave"></div>
+                    <div class="voice-wave"></div>
+                    <div class="voice-wave"></div>
+                    <div class="voice-wave"></div>
+                </div>
+                
+                <p id="voiceText" class="text-sm text-gray-500 mb-4 italic">Listening...</p>
+                
+                <div class="flex space-x-3">
+                    <button onclick="stopVoiceInput()" class="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg">Cancel</button>
+                    <button onclick="confirmVoiceInput()" class="flex-1 bg-teal-600 text-white py-2 rounded-lg">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="qrModal" class="modal">
+        <div class="bg-white rounded-xl p-6 m-4 max-w-sm w-full">
+            <div class="text-center">
+                <h3 class="text-lg font-semibold mb-4">Scan ABHA QR Code</h3>
+                
+                <div class="relative bg-gray-100 rounded-lg p-8 mb-4">
+                    <div class="w-32 h-32 border-2 border-teal-600 rounded-lg mx-auto relative overflow-hidden">
+                        <div class="absolute top-0 left-0 right-0 h-1 bg-teal-600 scanning"></div>
+                        <div class="absolute inset-4 border border-gray-300 rounded"></div>
+                        <div class="absolute inset-8 bg-gray-200 rounded flex items-center justify-center">
+                            <span class="text-2xl">📱</span>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-2">Position QR code within the frame</p>
+                </div>
+                
+                <div class="flex space-x-3">
+                    <button onclick="closeQRScanner()" class="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg">Cancel</button>
+                    <button onclick="simulateQRSuccess()" class="flex-1 bg-teal-600 text-white py-2 rounded-lg">Simulate Scan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="ocrModal" class="modal">
+        <div class="bg-white rounded-xl p-6 m-4 max-w-md w-full">
+            <div class="text-center">
+                <h3 class="text-lg font-semibold mb-4">Smart Form Scanner</h3>
+                
+                <div class="relative bg-gray-100 rounded-lg p-4 mb-4">
+                    <div class="w-full h-48 bg-gray-200 rounded-lg flex items-center justify-center relative overflow-hidden">
+                        <div class="absolute top-0 left-0 right-0 h-1 bg-blue-600 scanning"></div>
+                        <div class="text-center">
+                            <span class="text-4xl mb-2 block">📄</span>
+                            <p class="text-sm text-gray-600">Position form within frame</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <p class="text-sm text-gray-600 mb-4">AI will extract data from MCP cards, immunization records, and other forms</p>
+                
+                <div class="flex space-x-3">
+                    <button onclick="closeOCRScanner()" class="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg">Cancel</button>
+                    <button onclick="simulateOCRScan()" class="flex-1 bg-blue-600 text-white py-2 rounded-lg">Capture</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="taskModal" class="modal">
+        <div class="bg-white rounded-xl p-6 m-4 max-w-md w-full max-h-96 overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+                <h3 id="taskModalTitle" class="text-lg font-semibold">Task Details</h3>
+                <button onclick="closeTaskModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <div id="taskModalContent" class="space-y-4">
+                </div>
+            
+            <div class="flex space-x-3 mt-6">
+                <button onclick="closeTaskModal()" class="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg">Close</button>
+                <button id="taskActionBtn" onclick="handleTaskAction()" class="flex-1 bg-teal-600 text-white py-2 rounded-lg">Take Action</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="ancModal" class="modal">
+        <div class="bg-white rounded-xl p-6 m-4 max-w-md w-full max-h-96 overflow-y-auto">
+            <h3 class="text-lg font-semibold mb-4">Record ANC Visit</h3>
+            
+            <form id="ancForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Patient Name</label>
+                    <input type="text" id="ancPatientName" class="w-full px-3 py-2 border border-gray-300 rounded-lg" readonly>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Weight (kg)</label>
+                        <input type="number" step="0.1" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="55.0">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">BP (mmHg)</label>
+                        <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="120/80">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Hemoglobin (g/dl)</label>
+                    <input type="number" step="0.1" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="11.5">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Complaints</label>
+                    <textarea class="w-full px-3 py-2 border border-gray-300 rounded-lg" rows="2" placeholder="Any complaints or symptoms"></textarea>
+                </div>
+                
+                <div class="flex space-x-3">
+                    <button type="button" onclick="closeANCModal()" class="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg">Cancel</button>
+                    <button type="submit" class="flex-1 bg-teal-600 text-white py-2 rounded-lg">Save Visit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="pendingTasksModal" class="modal">
+        <div class="bg-white rounded-xl p-6 m-4 max-w-md w-full max-h-[80vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold">All Pending Tasks (8)</h3>
+                <button onclick="closePendingTasksModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="space-y-3">
+                <div class="bg-white rounded-lg p-3 border-l-4 border-red-500 shadow-sm">
+                    <p class="font-semibold">Immunization Overdue</p>
+                    <p class="text-sm text-gray-600">Baby Raj - DPT-3 (5 days overdue)</p>
+                </div>
+                <div class="bg-white rounded-lg p-3 border-l-4 border-red-500 shadow-sm">
+                    <p class="font-semibold">High-Risk Follow-up</p>
+                    <p class="text-sm text-gray-600">Sunita Devi - Anemia + Hypertension</p>
+                </div>
+                <div class="bg-white rounded-lg p-3 border-l-4 border-red-500 shadow-sm">
+                    <p class="font-semibold">Immunization Overdue</p>
+                    <p class="text-sm text-gray-600">Baby Kavita - BCG (12 days overdue)</p>
+                </div>
+                <div class="bg-white rounded-lg p-3 border-l-4 border-yellow-500 shadow-sm">
+                    <p class="font-semibold">ANC Visit Due</p>
+                    <p class="text-sm text-gray-600">Priya Sharma - Due Today</p>
+                </div>
+                 <div class="bg-white rounded-lg p-3 border-l-4 border-yellow-500 shadow-sm">
+                    <p class="font-semibold">Immunization Due</p>
+                    <p class="text-sm text-gray-600">Baby Anita - Measles (Due in 2 days)</p>
+                </div>
+                <div class="bg-white rounded-lg p-3 border-l-4 border-yellow-500 shadow-sm">
+                    <p class="font-semibold">Dropout Follow-up</p>
+                    <p class="text-sm text-gray-600">Baby Suresh - Missed DPT-2</p>
+                </div>
+                <div class="bg-white rounded-lg p-3 border-l-4 border-green-500 shadow-sm">
+                    <p class="font-semibold">Follow-up Visit</p>
+                    <p class="text-sm text-gray-600">Meera Devi - Post-delivery check</p>
+                </div>
+                 <div class="bg-white rounded-lg p-3 border-l-4 border-green-500 shadow-sm">
+                    <p class="font-semibold">Nutrition Counselling</p>
+                    <p class="text-sm text-gray-600">Kamala Sharma - 3rd Trimester</p>
+                </div>
+            </div>
+             <button onclick="closePendingTasksModal()" class="w-full mt-6 bg-gray-200 text-gray-800 py-2 rounded-lg">Close</button>
+        </div>
+    </div>
+
+
+    <script>
+        // Global state
+        let currentPage = 'dashboard';
+        let isOnline = true;
+        let currentVoiceField = null;
+        let patients = [];
+        let currentLanguage = 'en';
+        
+        // Language translations
+        const translations = {
+            en: {
+                // Header
+                appTitle: "ASHA Mobile EHR",
+                userRole: "Sunita Devi - ASHA Worker",
+                online: "Online",
+                offline: "Offline",
+                
+                // Dashboard
+                goodMorning: "Good Morning, Sunita!",
+                greatDay: "Today is a great day to serve your community",
+                village: "Village: Rampur",
+                weather: "Weather: 28°C",
+                todaysVisits: "Today's Visits",
+                pendingTasks: "Pending Tasks",
+                quickActions: "Quick Actions",
+                registerPatient: "Register Patient",
+                addNewPatient: "Add new patient",
+                scanForm: "Scan Form",
+                ocrCapture: "OCR capture",
+                priorityTasks: "Priority Tasks",
+                
+                // Navigation
+                dashboard: "Dashboard",
+                records: "Records",
+                vaccines: "Vaccines",
+                maternal: "Maternal",
+                reports: "Reports",
+                
+                // Patient Registration
+                patientRegistration: "Patient Registration",
+                patientType: "Patient Type",
+                child: "Child",
+                pregnantMother: "Pregnant Mother",
+                basicInformation: "Basic Information",
+                fullName: "Full Name",
+                enterPatientName: "Enter patient name",
+                age: "Age",
+                gender: "Gender",
+                select: "Select",
+                male: "Male",
+                female: "Female",
+                selectVillage: "Select Village",
+                
+                // Health Records
+                healthRecords: "Health Records",
+                searchPatients: "Search patients...",
+                all: "All",
+                children: "Children",
+                mothers: "Mothers",
+                highRisk: "High Risk",
+                overdue: "Overdue",
+                
+                // Immunization
+                immunizationManagement: "Immunization Management",
+                dueList: "Due List",
+                vaccineCards: "Vaccine Cards",
+                dropouts: "Dropouts",
+                
+                // Maternal Health
+                maternalHealth: "Maternal Health",
+                highRiskCases: "High-Risk Cases",
+                ancPncSchedule: "ANC/PNC Schedule",
+                
+                // Work Planning
+                workPlanningReports: "Work Planning & Reports",
+                todaysWorkPlan: "Today's Work Plan",
+                reportsDashboard: "Reports Dashboard",
+                
+                // Sync Status
+                allDataSynced: "All data synced",
+                recordsPendingSync: "records pending sync",
+                syncing: "Syncing...",
+                syncCompleted: "Sync completed",
+                syncNow: "Sync Now"
+            },
+            hi: {
+                // Header
+                appTitle: "आशा मोबाइल ईएचआर",
+                userRole: "सुनीता देवी - आशा कार्यकर्ता",
+                online: "ऑनलाइन",
+                offline: "ऑफलाइन",
+                
+                // Dashboard
+                goodMorning: "नमस्ते सुनीता जी!",
+                greatDay: "आज आपके समुदाय की सेवा का अच्छा दिन है",
+                village: "गांव: रामपुर",
+                weather: "मौसम: 28°C",
+                todaysVisits: "आज की विजिट",
+                pendingTasks: "बकाया कार्य",
+                quickActions: "त्वरित कार्य",
+                registerPatient: "मरीज़ पंजीकरण",
+                addNewPatient: "नया मरीज़ जोड़ें",
+                scanForm: "फॉर्म स्कैन करें",
+                ocrCapture: "ओसीआर कैप्चर",
+                priorityTasks: "प्राथमिकता कार्य",
+                
+                // Navigation
+                dashboard: "डैशबोर्ड",
+                records: "रिकॉर्ड",
+                vaccines: "टीकाकरण",
+                maternal: "मातृत्व",
+                reports: "रिपोर्ट",
+                
+                // Patient Registration
+                patientRegistration: "मरीज़ पंजीकरण",
+                patientType: "मरीज़ का प्रकार",
+                child: "बच्चा",
+                pregnantMother: "गर्भवती माता",
+                basicInformation: "बुनियादी जानकारी",
+                fullName: "पूरा नाम",
+                enterPatientName: "मरीज़ का नाम दर्ज करें",
+                age: "उम्र",
+                gender: "लिंग",
+                select: "चुनें",
+                male: "पुरुष",
+                female: "महिला",
+                selectVillage: "गांव चुनें",
+                
+                // Health Records
+                healthRecords: "स्वास्थ्य रिकॉर्ड",
+                searchPatients: "मरीज़ खोजें...",
+                all: "सभी",
+                children: "बच्चे",
+                mothers: "माताएं",
+                highRisk: "उच्च जोखिम",
+                overdue: "बकाया",
+                
+                // Immunization
+                immunizationManagement: "टीकाकरण प्रबंधन",
+                dueList: "देय सूची",
+                vaccineCards: "टीका कार्ड",
+                dropouts: "छूटे हुए",
+                
+                // Maternal Health
+                maternalHealth: "मातृ स्वास्थ्य",
+                highRiskCases: "उच्च जोखिम मामले",
+                ancPncSchedule: "एएनसी/पीएनसी अनुसूची",
+                
+                // Work Planning
+                workPlanningReports: "कार्य योजना और रिपोर्ट",
+                todaysWorkPlan: "आज की कार्य योजना",
+                reportsDashboard: "रिपोर्ट डैशबोर्ड",
+                
+                // Sync Status
+                allDataSynced: "सभी डेटा सिंक हो गया",
+                recordsPendingSync: "रिकॉर्ड सिंक होना बाकी",
+                syncing: "सिंक हो रहा है...",
+                syncCompleted: "सिंक पूरा हुआ",
+                syncNow: "अभी सिंक करें"
+            },
+            kn: {
+                // Header
+                appTitle: "ಆಶಾ ಮೊಬೈಲ್ ಇಎಚ್‌ಆರ್",
+                userRole: "ಸುನೀತಾ ದೇವಿ - ಆಶಾ ಕಾರ್ಯಕರ್ತೆ",
+                online: "ಆನ್‌ಲೈನ್",
+                offline: "ಆಫ್‌ಲೈನ್",
+                
+                // Dashboard
+                goodMorning: "ನಮಸ್ಕಾರ ಸುನೀತಾ ಅವರೇ!",
+                greatDay: "ಇಂದು ನಿಮ್ಮ ಸಮುದಾಯದ ಸೇವೆಗೆ ಒಳ್ಳೆಯ ದಿನ",
+                village: "ಗ್ರಾಮ: ರಾಮಪುರ",
+                weather: "ಹವಾಮಾನ: 28°C",
+                todaysVisits: "ಇಂದಿನ ಭೇಟಿಗಳು",
+                pendingTasks: "ಬಾಕಿ ಕೆಲಸಗಳು",
+                quickActions: "ತ್ವರಿತ ಕ್ರಿಯೆಗಳು",
+                registerPatient: "ರೋಗಿ ನೋಂದಣಿ",
+                addNewPatient: "ಹೊಸ ರೋಗಿಯನ್ನು ಸೇರಿಸಿ",
+                scanForm: "ಫಾರ್ಮ್ ಸ್ಕ್ಯಾನ್",
+                ocrCapture: "ಒಸಿಆರ್ ಕ್ಯಾಪ್ಚರ್",
+                priorityTasks: "ಆದ್ಯತೆ ಕೆಲಸಗಳು",
+                
+                // Navigation
+                dashboard: "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್",
+                records: "ದಾಖಲೆಗಳು",
+                vaccines: "ಲಸಿಕೆಗಳು",
+                maternal: "ಮಾತೃತ್ವ",
+                reports: "ವರದಿಗಳು",
+                
+                // Patient Registration
+                patientRegistration: "ರೋಗಿ ನೋಂದಣಿ",
+                patientType: "ರೋಗಿಯ ಪ್ರಕಾರ",
+                child: "ಮಗು",
+                pregnantMother: "ಗರ್ಭಿಣಿ ತಾಯಿ",
+                basicInformation: "ಮೂಲ ಮಾಹಿತಿ",
+                fullName: "ಪೂರ್ಣ ಹೆಸರು",
+                enterPatientName: "ರೋಗಿಯ ಹೆಸರು ನಮೂದಿಸಿ",
+                age: "ವಯಸ್ಸು",
+                gender: "ಲಿಂಗ",
+                select: "ಆಯ್ಕೆಮಾಡಿ",
+                male: "ಪುರುಷ",
+                female: "ಮಹಿಳೆ",
+                selectVillage: "ಗ್ರಾಮ ಆಯ್ಕೆಮಾಡಿ",
+                
+                // Health Records
+                healthRecords: "ಆರೋಗ್ಯ ದಾಖಲೆಗಳು",
+                searchPatients: "ರೋಗಿಗಳನ್ನು ಹುಡುಕಿ...",
+                all: "ಎಲ್ಲಾ",
+                children: "ಮಕ್ಕಳು",
+                mothers: "ತಾಯಂದಿರು",
+                highRisk: "ಹೆಚ್ಚಿನ ಅಪಾಯ",
+                overdue: "ಬಾಕಿ",
+                
+                // Immunization
+                immunizationManagement: "ಲಸಿಕೆ ನಿರ್ವಹಣೆ",
+                dueList: "ಬಾಕಿ ಪಟ್ಟಿ",
+                vaccineCards: "ಲಸಿಕೆ ಕಾರ್ಡ್‌ಗಳು",
+                dropouts: "ಬಿಟ್ಟುಹೋದವರು",
+                
+                // Maternal Health
+                maternalHealth: "ಮಾತೃ ಆರೋಗ್ಯ",
+                highRiskCases: "ಹೆಚ್ಚಿನ ಅಪಾಯದ ಪ್ರಕರಣಗಳು",
+                ancPncSchedule: "ಎಎನ್‌ಸಿ/ಪಿಎನ್‌ಸಿ ವೇಳಾಪಟ್ಟಿ",
+                
+                // Work Planning
+                workPlanningReports: "ಕೆಲಸದ ಯೋಜನೆ ಮತ್ತು ವರದಿಗಳು",
+                todaysWorkPlan: "ಇಂದಿನ ಕೆಲಸದ ಯೋಜನೆ",
+                reportsDashboard: "ವರದಿಗಳ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್",
+                
+                // Sync Status
+                allDataSynced: "ಎಲ್ಲಾ ಡೇಟಾ ಸಿಂಕ್ ಆಗಿದೆ",
+                recordsPendingSync: "ದಾಖಲೆಗಳು ಸಿಂಕ್ ಆಗಬೇಕಿದೆ",
+                syncing: "ಸಿಂಕ್ ಆಗುತ್ತಿದೆ...",
+                syncCompleted: "ಸಿಂಕ್ ಪೂರ್ಣಗೊಂಡಿದೆ",
+                syncNow: "ಈಗ ಸಿಂಕ್ ಮಾಡಿ"
+            },
+            te: {
+                // Header
+                appTitle: "ఆశా మొబైల్ ఇహెచ్‌ఆర్",
+                userRole: "సునీతా దేవి - ఆశా కార్యకర్త",
+                online: "ఆన్‌లైన్",
+                offline: "ఆఫ్‌లైన్",
+                
+                // Dashboard
+                goodMorning: "నమస్కారం సునీతా గారు!",
+                greatDay: "ఈ రోజు మీ సమాజ సేవకు మంచి రోజు",
+                village: "గ్రామం: రామపూర్",
+                weather: "వాతావరణం: 28°C",
+                todaysVisits: "నేటి సందర్శనలు",
+                pendingTasks: "పెండింగ్ పనులు",
+                quickActions: "త్వరిత చర్యలు",
+                registerPatient: "రోగి నమోదు",
+                addNewPatient: "కొత్త రోగిని జోడించండి",
+                scanForm: "ఫారం స్కాన్",
+                ocrCapture: "ఓసిఆర్ క్యాప్చర్",
+                priorityTasks: "ప్రాధాన్యత పనులు",
+                
+                // Navigation
+                dashboard: "డాష్‌బోర్డ్",
+                records: "రికార్డులు",
+                vaccines: "టీకాలు",
+                maternal: "మాతృత్వం",
+                reports: "నివేదికలు",
+                
+                // Patient Registration
+                patientRegistration: "రోగి నమోదు",
+                patientType: "రోగి రకం",
+                child: "పిల్లవాడు",
+                pregnantMother: "గర్భిణీ తల్లి",
+                basicInformation: "ప్రాథమిక సమాచారం",
+                fullName: "పూర్తి పేరు",
+                enterPatientName: "రోగి పేరు నమోదు చేయండి",
+                age: "వయస్సు",
+                gender: "లింగం",
+                select: "ఎంచుకోండి",
+                male: "పురుషుడు",
+                female: "స్త్రీ",
+                selectVillage: "గ్రామం ఎంచుకోండి",
+                
+                // Health Records
+                healthRecords: "ఆరోగ్య రికార్డులు",
+                searchPatients: "రోగులను వెతకండి...",
+                all: "అన్నీ",
+                children: "పిల్లలు",
+                mothers: "తల్లులు",
+                highRisk: "అధిక ప్రమాదం",
+                overdue: "బకాయి",
+                
+                // Immunization
+                immunizationManagement: "టీకా నిర్వహణ",
+                dueList: "బకాయి జాబితా",
+                vaccineCards: "టీకా కార్డులు",
+                dropouts: "వదిలిపెట్టినవారు",
+                
+                // Maternal Health
+                maternalHealth: "మాతృ ఆరోగ్యం",
+                highRiskCases: "అధిక ప్రమాద కేసులు",
+                ancPncSchedule: "ఎఎన్‌సి/పిఎన్‌సి షెడ్యూల్",
+                
+                // Work Planning
+                workPlanningReports: "పని ప్రణాళిక మరియు నివేదికలు",
+                todaysWorkPlan: "నేటి పని ప్రణాళిక",
+                reportsDashboard: "నివేదికల డాష్‌బోర్డ్",
+                
+                // Sync Status
+                allDataSynced: "అన్ని డేటా సింక్ అయ్యింది",
+                recordsPendingSync: "రికార్డులు సింక్ కావాలి",
+                syncing: "సింక్ అవుతోంది...",
+                syncCompleted: "సింక్ పూర్తయింది",
+                syncNow: "ఇప్పుడు సింక్ చేయండి"
+            }
+        };
+        
+        // Sample patient data
+        const samplePatients = [
+            {
+                id: 'raj-kumar',
+                name: 'Baby Raj Kumar',
+                type: 'child',
+                age: '4 months',
+                village: 'rampur',
+                status: 'overdue',
+                priority: 'high',
+                details: 'DPT-3 overdue by 5 days',
+                birthWeight: 2.8,
+                motherName: 'Sunita Devi'
+            },
+            {
+                id: 'anita-sharma',
+                name: 'Baby Anita Sharma',
+                type: 'child',
+                age: '9 months',
+                village: 'krishnapur',
+                status: 'due',
+                priority: 'medium',
+                details: 'Measles vaccine due in 2 days',
+                birthWeight: 3.2,
+                motherName: 'Priya Sharma'
+            },
+            {
+                id: 'priya-patel',
+                name: 'Baby Priya Patel',
+                type: 'child',
+                age: '10 weeks',
+                village: 'rampur',
+                status: 'completed',
+                priority: 'low',
+                details: 'DPT-2 completed today',
+                birthWeight: 3.0,
+                motherName: 'Meera Patel'
+            },
+            {
+                id: 'sunita-devi',
+                name: 'Sunita Devi',
+                type: 'mother',
+                age: '25 years',
+                village: 'rampur',
+                status: 'high-risk',
+                priority: 'high',
+                details: 'Anemia + Hypertension, 28 weeks pregnant',
+                riskFactors: ['anemia', 'hypertension']
+            },
+            {
+                id: 'priya-sharma',
+                name: 'Priya Sharma',
+                type: 'mother',
+                age: '22 years',
+                village: 'krishnapur',
+                status: 'due',
+                priority: 'medium',
+                details: 'ANC-2 visit due today, 20 weeks pregnant',
+                riskFactors: []
+            },
+            {
+                id: 'meera-patel',
+                name: 'Meera Patel',
+                type: 'mother',
+                age: '28 years',
+                village: 'govindpur',
+                status: 'pnc',
+                priority: 'medium',
+                details: 'PNC-1 visit scheduled, delivered 3 days ago',
+                riskFactors: []
+            }
+        ];
+
+        // Language functions
+        function changeLanguage(lang) {
+            currentLanguage = lang;
+            updateAllTexts();
+        }
+        
+        function updateAllTexts() {
+            const t = translations[currentLanguage];
+            
+            // Header
+            document.querySelector('h1').textContent = t.appTitle;
+            document.querySelector('.text-teal-100').textContent = t.userRole;
+            
+            // Dashboard
+            document.querySelector('.bg-gradient-to-r.from-blue-500 h2').textContent = t.goodMorning;
+            document.querySelector('.text-blue-100').textContent = t.greatDay;
+            
+            // Update all data-translate elements
+            document.querySelectorAll('[data-translate]').forEach(element => {
+                const key = element.getAttribute('data-translate');
+                if (t[key]) {
+                    if (element.tagName === 'INPUT' && element.type !== 'submit') {
+                        element.placeholder = t[key];
+                    } else {
+                        element.textContent = t[key];
+                    }
+                }
+            });
+            
+            // Update connectivity status
+            updateConnectivityStatus();
+            updateSyncStatus();
+        }
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            patients = [...samplePatients];
+            showPage('dashboard');
+            updateSyncStatus();
+            populateHealthRecords();
+            
+            // Language selector event listener
+            document.getElementById('languageSelector').addEventListener('change', function(e) {
+                changeLanguage(e.target.value);
+            });
+        });
+
+        // Navigation functions
+        function showPage(pageId) {
+            // Hide all pages
+            document.querySelectorAll('.page-content').forEach(page => {
+                page.classList.add('hidden');
+            });
+            
+            // Show selected page
+            document.getElementById(pageId).classList.remove('hidden');
+            
+            // Update navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Find and activate the corresponding nav item
+            const navItems = document.querySelectorAll('.nav-item');
+            const pageIndex = ['dashboard', 'health-records', 'immunization', 'maternal-health', 'work-planning'].indexOf(pageId);
+            if (pageIndex !== -1 && navItems[pageIndex]) {
+                navItems[pageIndex].classList.add('active');
+            }
+            
+            currentPage = pageId;
+        }
+
+        // Function to handle Today's Visits click
+        function showTodaysVisits() {
+            // Navigate directly to the work planning page which shows today's plan
+            showPage('work-planning');
+        }
+        
+        // UPDATED: Function to show Pending Tasks Modal
+        function showPendingTasks() {
+            document.getElementById('pendingTasksModal').classList.add('active');
+        }
+        
+        // NEW: Function to close Pending Tasks Modal
+        function closePendingTasksModal() {
+            document.getElementById('pendingTasksModal').classList.remove('active');
+        }
+
+        // Connectivity toggle
+        document.getElementById('connectivityToggle').addEventListener('click', function() {
+            isOnline = !isOnline;
+            updateConnectivityStatus();
+            updateSyncStatus();
+        });
+
+        function updateConnectivityStatus() {
+            const dot = document.getElementById('connectivityDot');
+            const text = document.getElementById('connectivityText');
+            
+            if (isOnline) {
+                dot.className = 'w-2 h-2 bg-green-400 rounded-full pulse-dot';
+                text.textContent = 'Online';
+            } else {
+                dot.className = 'w-2 h-2 bg-red-400 rounded-full';
+                text.textContent = 'Offline';
+            }
+        }
+
+        function updateSyncStatus() {
+            const syncBar = document.getElementById('syncBar');
+            const syncIcon = document.getElementById('syncIcon');
+            const syncText = document.getElementById('syncText');
+            
+            if (isOnline) {
+                syncBar.className = 'fixed bottom-16 left-0 right-0 bg-green-600 text-white px-4 py-2 text-sm flex items-center justify-between';
+                syncIcon.textContent = '✓';
+                syncText.textContent = 'All data synced';
+            } else {
+                syncBar.className = 'fixed bottom-16 left-0 right-0 bg-yellow-600 text-white px-4 py-2 text-sm flex items-center justify-between';
+                syncIcon.textContent = '⏳';
+                syncText.textContent = '3 records pending sync';
+            }
+        }
+
+        function manualSync() {
+            if (!isOnline) {
+                alert('Cannot sync while offline. Please check your connection.');
+                return;
+            }
+            
+            const syncText = document.getElementById('syncText');
+            const syncIcon = document.getElementById('syncIcon');
+            
+            syncIcon.textContent = '🔄';
+            syncText.textContent = 'Syncing...';
+            
+            setTimeout(() => {
+                syncIcon.textContent = '✓';
+                syncText.textContent = 'Sync completed';
+            }, 2000);
+        }
+
+        // Patient registration functions
+        function selectPatientType(type) {
+            const childBtn = document.getElementById('childBtn');
+            const motherBtn = document.getElementById('motherBtn');
+            const childFields = document.getElementById('childFields');
+            const motherFields = document.getElementById('motherFields');
+            
+            if (type === 'child') {
+                childBtn.className = 'p-4 border-2 border-blue-200 rounded-xl text-center bg-blue-50';
+                motherBtn.className = 'p-4 border-2 border-gray-200 rounded-xl text-center';
+                childFields.classList.remove('hidden');
+                motherFields.classList.add('hidden');
+            } else {
+                motherBtn.className = 'p-4 border-2 border-pink-200 rounded-xl text-center bg-pink-50';
+                childBtn.className = 'p-4 border-2 border-gray-200 rounded-xl text-center';
+                motherFields.classList.remove('hidden');
+                childFields.classList.add('hidden');
+            }
+        }
+
+        // Voice input functions
+        function startVoiceInput(fieldId) {
+            currentVoiceField = fieldId;
+            document.getElementById('voiceModal').classList.add('active');
+            
+            // Simulate voice recognition
+            setTimeout(() => {
+                const sampleTexts = {
+                    'patientName': 'सुनीता देवी',
+                    'motherName': 'कमला शर्मा'
+                };
+                
+                document.getElementById('voiceText').textContent = sampleTexts[fieldId] || 'रोगी का नाम...';
+            }, 1500);
+        }
+
+        function stopVoiceInput() {
+            document.getElementById('voiceModal').classList.remove('active');
+            currentVoiceField = null;
+        }
+
+        function confirmVoiceInput() {
+            if (currentVoiceField) {
+                const voiceText = document.getElementById('voiceText').textContent;
+                const translations = {
+                    'सुनीता देवी': 'Sunita Devi',
+                    'कमला शर्मा': 'Kamala Sharma'
+                };
+                
+                document.getElementById(currentVoiceField).value = translations[voiceText] || voiceText;
+            }
+            stopVoiceInput();
+        }
+
+        // QR Scanner functions
+        function simulateQRScan() {
+            document.getElementById('qrModal').classList.add('active');
+        }
+
+        function closeQRScanner() {
+            document.getElementById('qrModal').classList.remove('active');
+        }
+
+        function simulateQRSuccess() {
+            document.getElementById('abhaId').value = '12-3456-7890-1234';
+            closeQRScanner();
+            
+            // Show success message
+            setTimeout(() => {
+                alert('ABHA ID scanned successfully!');
+            }, 300);
+        }
+
+        // OCR Scanner functions
+        function showOCRScanner() {
+            document.getElementById('ocrModal').classList.add('active');
+        }
+
+        function closeOCRScanner() {
+            document.getElementById('ocrModal').classList.remove('active');
+        }
+
+        function simulateOCRScan() {
+            closeOCRScanner();
+            
+            // Simulate OCR processing
+            setTimeout(() => {
+                alert('Form scanned successfully! Data extracted and ready for review.');
+                // In a real app, this would populate form fields with extracted data
+            }, 1000);
+        }
+
+        // Registration form submission
+        document.getElementById('registrationForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const patientData = {
+                id: Date.now().toString(),
+                name: document.getElementById('patientName').value,
+                age: document.getElementById('patientAge').value,
+                gender: document.getElementById('patientGender').value,
+                village: document.getElementById('patientVillage').value,
+                abhaId: document.getElementById('abhaId').value,
+                type: document.getElementById('childFields').classList.contains('hidden') ? 'mother' : 'child',
+                status: 'registered',
+                priority: 'low'
+            };
+            
+            // Add type-specific data
+            if (patientData.type === 'child') {
+                patientData.birthWeight = parseFloat(document.getElementById('birthWeight').value);
+                patientData.motherName = document.getElementById('motherName').value;
+                patientData.dateOfBirth = document.getElementById('dateOfBirth').value;
+                
+                // Check for low birth weight
+                if (patientData.birthWeight < 2.5) {
+                    patientData.status = 'low-birth-weight';
+                    patientData.priority = 'high';
+                }
+            } else {
+                patientData.lmpDate = document.getElementById('lmpDate').value;
+                patientData.gravida = document.getElementById('gravida').value;
+                patientData.riskFactors = [];
+                
+                // Check risk factors
+                if (document.getElementById('anemia').checked) patientData.riskFactors.push('anemia');
+                if (document.getElementById('hypertension').checked) patientData.riskFactors.push('hypertension');
+                if (document.getElementById('diabetes').checked) patientData.riskFactors.push('diabetes');
+                
+                if (patientData.riskFactors.length > 0) {
+                    patientData.status = 'high-risk';
+                    patientData.priority = 'high';
+                }
+            }
+            
+            patients.push(patientData);
+            populateHealthRecords();
+            
+            alert('Patient registered successfully!');
+            showPage('health-records');
+        });
+
+        // Health records functions
+        function populateHealthRecords(patientList = patients) {
+            const recordsList = document.getElementById('recordsList');
+            recordsList.innerHTML = '';
+            
+            if (patientList.length === 0) {
+                recordsList.innerHTML = '<div class="text-center py-8 text-gray-500">No records found matching the filter criteria.</div>';
+                return;
+            }
+            
+            patientList.forEach(patient => {
+                const recordDiv = document.createElement('div');
+                recordDiv.className = `bg-white rounded-xl p-4 shadow-sm border-l-4 ${getPriorityBorderColor(patient.priority)}`;
+                
+                recordDiv.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <p class="font-semibold text-gray-900">${patient.name}</p>
+                            <p class="text-sm text-gray-600">${patient.details || `${patient.type} • ${patient.age} • ${patient.village}`}</p>
+                            <p class="text-xs ${getPriorityTextColor(patient.priority)} mt-1">${getStatusText(patient.status)}</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="${getStatusBadgeClass(patient.status)} px-2 py-1 rounded-full text-xs font-medium">${patient.status}</span>
+                            <button onclick="viewPatientDetails('${patient.id}')" class="block mt-2 px-3 py-1 bg-teal-600 text-white rounded text-xs">View</button>
+                        </div>
+                    </div>
+                `;
+                
+                recordsList.appendChild(recordDiv);
+            });
+        }
+
+        function getPriorityBorderColor(priority) {
+            switch (priority) {
+                case 'high': return 'border-red-500';
+                case 'medium': return 'border-yellow-500';
+                default: return 'border-green-500';
+            }
+        }
+
+        function getPriorityTextColor(priority) {
+            switch (priority) {
+                case 'high': return 'text-red-600';
+                case 'medium': return 'text-yellow-600';
+                default: return 'text-green-600';
+            }
+        }
+
+        function getStatusText(status) {
+            switch (status) {
+                case 'overdue': return 'Overdue - Immediate attention needed';
+                case 'due': return 'Due soon';
+                case 'high-risk': return 'High-risk case';
+                case 'low-birth-weight': return 'Low birth weight - Monitor closely';
+                default: return 'Normal';
+            }
+        }
+
+        function getStatusBadgeClass(status) {
+            switch (status) {
+                case 'overdue': return 'status-overdue';
+                case 'due': return 'status-due';
+                case 'high-risk': return 'status-overdue';
+                default: return 'status-completed';
+            }
+        }
+
+        function filterRecords(filter) {
+            // Update filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.className = 'filter-btn px-4 py-2 bg-gray-200 text-gray-700 rounded-full text-sm whitespace-nowrap';
+            });
+            event.target.className = 'filter-btn active px-4 py-2 bg-teal-600 text-white rounded-full text-sm whitespace-nowrap';
+            
+            // Filter patients based on selected filter
+            let filteredPatients = patients;
+            
+            switch(filter) {
+                case 'children':
+                    filteredPatients = patients.filter(p => p.type === 'child');
+                    break;
+                case 'mothers':
+                    filteredPatients = patients.filter(p => p.type === 'mother');
+                    break;
+                case 'high-risk':
+                    filteredPatients = patients.filter(p => p.status === 'high-risk' || p.priority === 'high');
+                    break;
+                case 'overdue':
+                    filteredPatients = patients.filter(p => p.status === 'overdue');
+                    break;
+                default:
+                    filteredPatients = patients;
+            }
+            
+            populateHealthRecords(filteredPatients);
+        }
+
+        function viewPatientDetails(patientId) {
+            const patient = patients.find(p => p.id === patientId);
+            if (patient) {
+                alert(`Patient Details:\n\nName: ${patient.name}\nAge: ${patient.age}\nType: ${patient.type}\nVillage: ${patient.village}\nStatus: ${patient.status}`);
+            }
+        }
+
+        // Immunization functions
+        function showImmunizationTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.immunization-tab').forEach(tab => {
+                tab.className = 'immunization-tab flex-1 py-2 px-3 rounded-md text-sm font-medium text-gray-600';
+            });
+            event.target.className = 'immunization-tab active flex-1 py-2 px-3 rounded-md text-sm font-medium bg-teal-600 text-white';
+            
+            // Show/hide content
+            document.querySelectorAll('.immunization-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+            document.getElementById(tabName + '-tab').classList.remove('hidden');
+        }
+
+        function recordVaccination(patientId) {
+            const patient = patients.find(p => p.id === patientId);
+            if (patient) {
+                // Update patient status
+                patient.status = 'completed';
+                patient.priority = 'low';
+                
+                // Show success message
+                alert(`✅ Vaccination recorded successfully for ${patient.name}!\n\nVaccine: DPT-3, OPV-3\nDate: ${new Date().toLocaleDateString()}\nASHA Worker: Sunita Devi`);
+                
+                // Refresh the immunization view
+                showImmunizationTab('due-list');
+                populateHealthRecords();
+            }
+        }
+
+        // Maternal health functions
+        function recordANCVisit(patientId) {
+            const patient = patients.find(p => p.id === patientId);
+            if (patient) {
+                document.getElementById('ancPatientName').value = patient.name;
+                document.getElementById('ancModal').classList.add('active');
+            }
+        }
+
+        function closeANCModal() {
+            document.getElementById('ancModal').classList.remove('active');
+        }
+
+        // ANC form submission
+        document.getElementById('ancForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            closeANCModal();
+            alert('ANC visit recorded successfully!');
+        });
+
+        // Search functionality
+        document.getElementById('searchRecords').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const records = document.querySelectorAll('#recordsList > div');
+            
+            records.forEach(record => {
+                const text = record.textContent.toLowerCase();
+                if (text.includes(searchTerm)) {
+                    record.style.display = 'block';
+                } else {
+                    record.style.display = 'none';
+                }
+            });
+        });
+
+        // Task details functions
+        let currentTaskId = null;
+        
+        function showTaskDetails(taskId) {
+            currentTaskId = taskId;
+            const modal = document.getElementById('taskModal');
+            const title = document.getElementById('taskModalTitle');
+            const content = document.getElementById('taskModalContent');
+            const actionBtn = document.getElementById('taskActionBtn');
+            
+            const taskDetails = {
+                'immunization-overdue': {
+                    title: 'Immunization Overdue - High Priority',
+                    content: `
+                        <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                            <h4 class="font-semibold text-red-800 mb-2">Patient: Baby Raj Kumar</h4>
+                            <div class="space-y-2 text-sm">
+                                <p><strong>Age:</strong> 14 weeks</p>
+                                <p><strong>Village:</strong> Rampur</p>
+                                <p><strong>Mother:</strong> Sunita Devi</p>
+                                <p><strong>Overdue Vaccines:</strong> DPT-3, OPV-3</p>
+                                <p><strong>Days Overdue:</strong> 5 days</p>
+                                <p><strong>Risk Level:</strong> High - Increased susceptibility to diseases</p>
+                            </div>
+                        </div>
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <h5 class="font-medium text-blue-800 mb-2">Action Required:</h5>
+                            <ul class="text-sm text-blue-700 space-y-1">
+                                <li>• Contact mother immediately</li>
+                                <li>• Schedule vaccination visit today</li>
+                                <li>• Counsel on importance of timely vaccination</li>
+                                <li>• Update immunization card</li>
+                            </ul>
+                        </div>
+                    `,
+                    actionText: 'Record Vaccination'
+                },
+                'anc-visit-due': {
+                    title: 'ANC Visit Due Today',
+                    content: `
+                        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                            <h4 class="font-semibold text-yellow-800 mb-2">Patient: Priya Sharma</h4>
+                            <div class="space-y-2 text-sm">
+                                <p><strong>Age:</strong> 22 years</p>
+                                <p><strong>Village:</strong> Krishnapur</p>
+                                <p><strong>Pregnancy:</strong> 20 weeks (2nd Trimester)</p>
+                                <p><strong>Visit Type:</strong> ANC-2</p>
+                                <p><strong>Last Visit:</strong> 4 weeks ago</p>
+                                <p><strong>Risk Factors:</strong> None identified</p>
+                            </div>
+                        </div>
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <h5 class="font-medium text-blue-800 mb-2">Checkup Required:</h5>
+                            <ul class="text-sm text-blue-700 space-y-1">
+                                <li>• Weight and blood pressure monitoring</li>
+                                <li>• Hemoglobin test</li>
+                                <li>• Fetal heart rate check</li>
+                                <li>• Iron and folic acid supplementation</li>
+                                <li>• Tetanus toxoid if due</li>
+                            </ul>
+                        </div>
+                    `,
+                    actionText: 'Record ANC Visit'
+                },
+                'follow-up-visit': {
+                    title: 'Post-Delivery Follow-up',
+                    content: `
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                            <h4 class="font-semibold text-green-800 mb-2">Patient: Meera Devi</h4>
+                            <div class="space-y-2 text-sm">
+                                <p><strong>Age:</strong> 26 years</p>
+                                <p><strong>Village:</strong> Govindpur</p>
+                                <p><strong>Delivery Date:</strong> 3 days ago</p>
+                                <p><strong>Delivery Type:</strong> Normal delivery</p>
+                                <p><strong>Baby Status:</strong> Healthy, 2.8kg</p>
+                                <p><strong>Complications:</strong> None</p>
+                            </div>
+                        </div>
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <h5 class="font-medium text-blue-800 mb-2">PNC Checkup:</h5>
+                            <ul class="text-sm text-blue-700 space-y-1">
+                                <li>• Mother's health assessment</li>
+                                <li>• Breastfeeding counseling</li>
+                                <li>• Baby's weight and feeding check</li>
+                                <li>• Family planning counseling</li>
+                                <li>• Danger signs education</li>
+                            </ul>
+                        </div>
+                    `,
+                    actionText: 'Record PNC Visit'
+                }
+            };
+            
+            const task = taskDetails[taskId];
+            if (task) {
+                title.textContent = task.title;
+                content.innerHTML = task.content;
+                actionBtn.textContent = task.actionText;
+                modal.classList.add('active');
+            }
+        }
+        
+        function closeTaskModal() {
+            document.getElementById('taskModal').classList.remove('active');
+            currentTaskId = null;
+        }
+        
+        function handleTaskAction() {
+            if (currentTaskId === 'immunization-overdue') {
+                recordVaccination('raj-kumar');
+                closeTaskModal();
+            } else if (currentTaskId === 'anc-visit-due') {
+                recordANCVisit('priya-sharma');
+                closeTaskModal();
+            } else if (currentTaskId === 'follow-up-visit') {
+                alert('✅ PNC visit recorded successfully for Meera Devi!\n\nVisit Type: PNC-1\nDate: ' + new Date().toLocaleDateString() + '\nASHA Worker: Sunita Devi');
+                closeTaskModal();
+            }
+        }
+
+        // Vaccination and maternal health functions
+        function viewFullVaccineCard(patientId) {
+            alert(`📋 Full Vaccine Card for ${patientId}\n\nThis would open a detailed immunization history with:\n• Complete vaccination schedule\n• Dates and batch numbers\n• ASHA worker signatures\n• Next due dates\n• Growth monitoring data`);
+        }
+        
+        function followUpDropout(patientId) {
+            alert(`📞 Follow-up initiated for ${patientId}\n\n• SMS sent to mother's phone\n• Home visit scheduled for tomorrow\n• Counseling session planned\n• Catch-up vaccination schedule prepared\n\nASHA Worker: Sunita Devi`);
+        }
+        
+        function urgentFollowUp(patientId) {
+            alert(`🚨 URGENT Follow-up for ${patientId}\n\n• Immediate home visit required\n• ANM notified for support\n• Supervisor informed\n• Complete immunization catch-up needed\n\nAction: Visit scheduled within 2 hours`);
+        }
+        
+        function viewHighRiskCase(patientId) {
+            const riskDetails = {
+                'sunita-devi': {
+                    name: 'Sunita Devi',
+                    risks: 'Anemia (Hb: 8.2 g/dl) + Hypertension (150/95)',
+                    actions: '• Weekly BP monitoring\n• Iron supplementation\n• Referral to PHC\n• Dietary counseling'
+                },
+                'kamala-sharma': {
+                    name: 'Kamala Sharma', 
+                    risks: 'Previous C-section + Advanced maternal age (35 years)',
+                    actions: '• Monthly specialist visits\n• Birth preparedness plan\n• Emergency transport arranged\n• Delivery at district hospital'
+                }
+            };
+            
+            const patient = riskDetails[patientId];
+            if (patient) {
+                alert(`⚠️ High-Risk Case: ${patient.name}\n\nRisk Factors:\n${patient.risks}\n\nAction Plan:\n${patient.actions}`);
+            }
+        }
+        
+        // Work planning functions
+        function viewVillageDetails(village, type) {
+            const details = {
+                'rampur': {
+                    'immunizations': '3 Overdue Immunizations in Rampur:\n• Baby Raj Kumar - DPT-3 (5 days overdue)\n• Baby Kavita Singh - BCG (12 days overdue)\n• Baby Rohit - OPV-2 (2 days overdue)',
+                    'anc': '2 ANC Visits Due in Rampur:\n• Sunita Devi - ANC-3 (High risk)\n• Meera Sharma - ANC-2 (Normal)'
+                },
+                'krishnapur': {
+                    'followups': '4 Follow-up Visits in Krishnapur:\n• Post-delivery checks (2)\n• Growth monitoring (1)\n• Nutrition counseling (1)',
+                    'registrations': '1 Pending Registration:\n• Newborn baby (3 days old)\n• Mother: Priya Patel\n• Birth weight: 2.9 kg'
+                }
+            };
+            
+            const detail = details[village]?.[type];
+            if (detail) {
+                alert(`📍 ${village.toUpperCase()} - ${type.toUpperCase()}\n\n${detail}`);
+            }
+        }
+        
+        function startVillageVisit(village) {
+            alert(`🚶‍♀️ Starting village visit to ${village.toUpperCase()}\n\n✅ Route optimized\n✅ Patient list prepared\n✅ Supplies checked\n✅ Forms ready\n\nEstimated duration: 4 hours\nPatients to visit: 8\n\nGood luck, Sunita!`);
+        }
+
+        // Initialize first tab as active
+        document.addEventListener('DOMContentLoaded', function() {
+            const firstTab = document.querySelector('.immunization-tab');
+            if (firstTab) {
+                firstTab.className = 'immunization-tab active flex-1 py-2 px-3 rounded-md text-sm font-medium bg-teal-600 text-white';
+            }
+        });
+    </script>
+</body>
+</html>
